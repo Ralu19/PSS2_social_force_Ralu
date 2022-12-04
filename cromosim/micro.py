@@ -21,7 +21,7 @@ from matplotlib.collections import EllipseCollection, LineCollection
 def compute_contacts(dom, xyrv, dmax):
     """This function uses a KDTree method to find the contacts between
     individuals. Moreover the contacts with the walls are also determined
-    from the wall distance (obtained by the fast-marching method). .
+    from the wall distance (obtained by the fast-marching method). 
 
     Parameters
     ----------

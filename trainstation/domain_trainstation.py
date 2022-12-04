@@ -1,5 +1,5 @@
 t = 0 # start time
-Tf = 40 # end time
+Tf = 25 # end time
 # variables for modeling
 tau = 0.5 
 mass = 80
@@ -79,6 +79,18 @@ colors = people["xyrv"][:,2]
 plot_people(0,dom,people,contacts,colors)
 plt.show()
 
+#initialize sensor
+#s1 = sensor([10.0,4.5,30.0,4.5], 0, 0, 0, 0)
+# all_sensors = {}
+# for domain_name in domains:
+#     all_sensors[domain_name] = []
+# for s in json_sensors:
+#     s["id"] = []
+#     s["times"] = []
+#     s["xy"] = []
+#     s["dir"] = []
+#     all_sensors[s["domain"]].append(s)
+#     print("===> All sensors = ",all_sensors)
 
 # main calculating loop
 
@@ -113,7 +125,7 @@ while(t<Tf):
                             colors, time=t,
                             plot_people=True, plot_contacts=False,
                             plot_paths=True, plot_velocities=False,
-                            plot_desired_velocities=False, plot_sensors=False, savefig=False)
+                            plot_desired_velocities=False, plot_sensors=True, savefig=False)
         plt.pause(0.01)
 
     t += dt

@@ -349,7 +349,7 @@ for s in json_sensors:
     s["xy"] = []
     s["dir"] = []
     all_sensors[s["domain"]].append(s)
-    #print("===> All sensors = ",all_sensors)
+    print("===> All sensors = ",all_sensors)
 
 """
     Initialization

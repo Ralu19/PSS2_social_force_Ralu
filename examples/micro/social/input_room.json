@@ -118,5 +118,5 @@
   "plot_desired_velocities":false,
   "plot_velocities":false,
   "plot_paths":true,
-  "plot_sensors":false
+  "plot_sensors":true
 }
