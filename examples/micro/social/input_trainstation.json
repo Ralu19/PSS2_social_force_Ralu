@@ -8,20 +8,6 @@
         "height":null,
         "wall_colors":[ [0,0,0] ],
         "shape_lines":[
-          {
-            "xx": [20.0,30.0],
-            "yy": [5.1,5.1],
-            "linewidth": 2,
-            "outline_color": [255,0,0],
-            "fill_color": [255,0,0]
-          },
-          {
-            "xx": [20.0,20.0],
-            "yy": [27.02,27.02],
-            "linewidth": 2,
-            "outline_color": [0,255,0],
-            "fill_color": [0,255,0]
-          }
         ],
         "shape_circles":[
         ],
@@ -33,7 +19,7 @@
         ],
         "destinations":[
           {
-            "name": "red_door",
+            "name": "door",
             "colors": [ [255,0,0] ],
             "excluded_colors":[ [0,0,0] ],
             "desired_velocity_from_color":[],
@@ -53,8 +39,8 @@
             "nb": 20,
             "radius_distribution": ["uniform",0.4,0.6],
             "velocity_distribution": ["normal",1.2,0.1],
-            "box": [1.1,36.5,1.1,26.5],
-            "destination": "red_door"
+            "box": [120,130,10,20],
+            "destination": "door"
           }
         ]
       }
@@ -63,12 +49,7 @@
       {
         "name": "sensor1",
         "domain": "trainstation",
-        "line": [100.0,44.5,300.0,44.5]
-      },
-      {
-        "name": "sensor2",
-        "domain": "trainstation",
-        "line": [100.0,25.5,300.0,25.5]
+        "line": [113.5,25.5,113.5,44.5]
       }
     ],
     "prefix":"results/",
