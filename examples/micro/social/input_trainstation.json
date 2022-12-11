@@ -1,80 +1,106 @@
 {
-    "domains":[
-      {
-        "name":"trainstation",
-        "background":"trainstation_domain.png",
-        "px":0.1,
-        "width":null,
-        "height":null,
-        "wall_colors":[ [0,0,0] ],
-        "shape_lines":[
-        ],
-        "shape_circles":[
-        ],
-        "shape_ellipses":[
-        ],
-        "shape_rectangles":[
-        ],
-        "shape_polygons":[
-        ],
-        "destinations":[
-          {
-            "name": "door",
-            "colors": [ [255,0,0] ],
-            "excluded_colors":[ [0,0,0] ],
-            "desired_velocity_from_color":[],
-            "velocity_scale": 1,
-            "next_destination": null,
-            "next_domain": null,
-            "next_transit_box":null
-          }
-        ]
-      }
-    ],
-    "people_init":[
-      {
-        "domain": "trainstation",
-        "groups": [
-          {
-            "nb": 20,
-            "radius_distribution": ["uniform",0.4,0.6],
-            "velocity_distribution": ["normal",1.2,0.1],
-            "box": [120,130,10,20],
-            "destination": "door"
-          }
-        ]
-      }
-    ],
-    "sensors":[
-      {
-        "name": "sensor1",
-        "domain": "trainstation",
-        "line": [113.5,25.5,113.5,44.5]
-      }
-    ],
-    "prefix":"results/",
-    "seed":40,
-    "with_graphes": true,
-    "Tf":25.0,
-    "dt":0.005,
-    "drawper":1000,
-    "mass":80.0,
-    "tau":0.5,
-    "F":2000.0,
-    "kappa":120000.0,
-    "delta":0.08,
-    "Fwall":2000.0,
-    "lambda":0.5,
-    "eta":240000.0,
-    "projection_method": "cvxopt",
-    "dmax":0.1,
-    "dmin_people":0.0,
-    "dmin_walls":0.0,
-    "plot_people":true,
-    "plot_contacts":false,
-    "plot_desired_velocities":false,
-    "plot_velocities":false,
-    "plot_paths":true,
-    "plot_sensors":true
-  }
+  "domains":[
+    {
+      "name":"trainstation",
+      "background":"trainstation3.png",
+      "px":0.2,
+      "width":null,
+      "height":null,
+      "wall_colors":[ [0,0,0] ],
+      "shape_lines":[
+      ],
+      "shape_circles":[
+        {
+          "center_x": 50.7,
+          "center_y": 10,
+          "radius": 0.5,
+          "outline_color": [0,0,255],
+          "fill_color": [0,0,255]
+        }
+      ],
+      "shape_ellipses":[
+      ],
+      "shape_rectangles":[
+      ],
+      "shape_polygons":[
+      ],
+      "destinations":[
+        {
+          "name": "dest1",
+          "colors": [ [0,0,255] ],
+          "excluded_colors":[ [0,0,0] ],
+          "desired_velocity_from_color":[],
+          "velocity_scale": 1,
+          "next_destination": null,
+          "next_domain": null,
+          "next_transit_box":null
+        },
+        {
+          "name": "dest2",
+          "colors": [ [0,255,0] ],
+          "excluded_colors":[ [0,0,0] ],
+          "desired_velocity_from_color":[],
+          "velocity_scale": 1,
+          "next_destination": null,
+          "next_domain": null,
+          "next_transit_box":null
+        }
+      ]
+    }
+  ],
+  "people_init":[
+    {
+      "domain": "trainstation",
+      "groups": [
+        {
+          "nb": 10,
+          "radius_distribution": ["uniform",0.4,0.6],
+          "velocity_distribution": ["normal",1.2,0.1],
+          "box": [25,30,10,20],
+          "destination": "dest1" 
+        },
+        {
+          "nb": 10,
+          "radius_distribution": ["uniform",0.4,0.6],
+          "velocity_distribution": ["normal",1.2,0.1],
+          "box": [25,30,20,40],
+          "destination": "dest2" 
+        }
+      ]
+    }
+  ],
+  "sensors":[
+    {
+      "name": "sensor1",
+      "domain": "trainstation",
+      "line": [32,7.8,32,47.8]
+    }
+  ],
+  "prefix":"results/",
+  "seed":0,
+  "with_graphes": true,
+  "Tf":40.0,
+  "dt":0.005,
+  "drawper":1000,
+  "mass":80.0,
+  "tau":0.5,
+  "F":2000.0,
+  "Fdz":100.0,
+  "dzy": 40,
+  "kappa":120000.0,
+  "delta":0.08,
+  "Fwall":2000.0,
+  "lambda":0.5,
+  "eta":240000.0,
+  "projection_method": "cvxopt",
+  "dmax":0.1,
+  "dmin_people":0.0,
+  "dmin_walls":0.0,
+  "plot_people":true,
+  "plot_contacts":false,
+  "plot_desired_velocities":false,
+  "plot_velocities":false,
+  "plot_paths":false,
+  "plot_sensors":true
+}
   
