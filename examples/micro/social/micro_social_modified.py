@@ -327,13 +327,13 @@ for i,jdom in enumerate(json_domains):
         next_transit_box=dd["next_transit_box"])
         print("===> Destination : ",dest)
         dom.add_destination(dest)
-        if (with_graphes):
-            dom.plot_desired_velocity(dd["name"],id=100*i+10+j,step=20)
+        #if (with_graphes):
+        #    dom.plot_desired_velocity(dd["name"],id=100*i+10+j,step=20)
 
     print("===> Domain : ",dom)
-    if (with_graphes):
-        dom.plot(id=100*i)
-        dom.plot_wall_dist(id=100*i+1,step=20)
+    #if (with_graphes):
+    #    dom.plot(id=100*i)
+    #    dom.plot_wall_dist(id=100*i+1,step=20)
 
     domains[dom.name] = dom
 
@@ -484,7 +484,7 @@ while (t<Tf):
                         plot_people=plot_p, plot_contacts=plot_c,
                         plot_paths=plot_pa, plot_velocities=plot_v,
                         plot_desired_velocities=plot_vd, plot_sensors=plot_s,
-                        sensors=all_sensors[dom.name], savefig=False,
+                        sensors=all_sensors[dom.name], savefig=True,
                         filename=prefix+dom.name+'_fig_'
                         + str(counter).zfill(6)+'.png')
             plt.pause(0.01)
