@@ -213,6 +213,10 @@ with open(opt.jsonfilename) as json_file:
     plot_paths: boolean
         If true, people paths are drawn
 """
+#boundaries of domain:
+# x (without the black borders) \in ~(0.6, 296.6) (297.6 for the entire pic)
+# y ( --//--) \in ~(1.1, 53.9) (54 for the entire pic)
+
 
 prefix = input["prefix"]
 if not os.path.exists(prefix):
@@ -226,14 +230,28 @@ json_people_init = input["people_init"]
 json_sensors = input["sensors"]
 #print("===> JSON data used to create sensors : ",json_sensors)
 nn = 20
+N_stationary = input["N_stationary"] #number of stationary people
 Tf = input["Tf"]
 dt = input["dt"]
 drawper = input["drawper"]
 mass = input["mass"]
 tau = input["tau"]
 F = input["F"]
-Fdz = input["Fdz"]
-dzy = input["dzy"]
+
+#DZ specific inputs
+Fdz = input["Fdz"] 
+dzy_up = input["dzy_up"] 
+dzy_down = input["dzy_down"]
+#box_dz_up = [[1.0,296.0, 51.0, 52.3]]
+box_dz_down = [[1.0,296.0, 1.0, 4.5]]
+
+## ZONES 
+## we can adjust the boxes how we like
+zone_1 = [[1.0, 50.2 , 1.0, 52.3 ]]
+zone_2 = [[50.21, 125.0, 1.0, 52.3]]
+zone_3 = [[125.01, 216.0 , 1.0, 52.3]]
+zone_4 =[[216.01 , 296.0, 1.0, 52.3]]
+
 kappa = input["kappa"]
 delta = input["delta"]
 Fwall = input["Fwall"]
@@ -261,6 +279,14 @@ print("===> ONLY used during initialization ! Minimal distance between \
 print("===> ONLY used during initialization ! Minimal distance between a \
        person and a wall, dmin_walls = ",dmin_walls)
 
+
+## RETIRED ##
+## Needed for stationary ppl
+# dest_list = [] #list conatining the destinations of stationary people
+# xyrv_stationary = np.zeros((N_stationary, 4)) #xyrv of stationary people
+# for i in range(N_stationary):
+#     xyrv_stationary[i,2] = 0 #radius distrib
+#     xyrv_stationary[i,3] = 0 #velocity distrib 
 """
     Build the Domain objects
 """
@@ -289,6 +315,35 @@ for i,jdom in enumerate(json_domains):
         circle = Circle( (sc["center_x"], sc["center_y"]), sc["radius"] )
         dom.add_shape(circle,outline_color=sc["outline_color"],
                       fill_color=sc["fill_color"])
+    ##To add the circles for the stationary people 
+    ##stationary people = obstacles; hence the color black 
+    ##(which is the wall color)
+    for c in range(N_stationary):
+        ## boundaries of kiosk: [124,215, 17.3,38.3]
+        ## boundaries of some other thingy at the end of the platform: [286,297, 16.5,38.1]  
+        ## waiting places in zone_1: []
+        dummy = random.choices([1,2,3,4], [1,5,10,7])
+        print(dummy)
+        if dummy == 1:
+            x_rnd = random.uniform(zone_1[0][0],zone_1[0][1]) 
+            y_rnd = random_from_intervals(((1,9), (46.5,54)))
+        elif dummy == 2:
+            x_rnd = random.uniform(zone_2[0][0],zone_2[0][1]) 
+            y_rnd = random.uniform(zone_2[0][2],zone_2[0][3])
+        elif dummy == 3:
+            x_rnd = random.uniform(zone_3[0][0],zone_3[0][1]) 
+            y_rnd = random_from_intervals(((1,17.3),(38.3,54)))        
+        else:    
+            x_rnd = random.uniform(zone_4[0][0],zone_4[0][1])
+            if (x_rnd>286.0 and x_rnd<297):
+                y_rnd = random_from_intervals(((1,17.3),(38.3,54)))
+            else:
+                y_rnd = random.uniform(1,54)           
+        circles = Circle((x_rnd, y_rnd), 0.25) #random location of dots
+        dom.add_shape(circles, outline_color=[0,0,0],fill_color=[0,0,0])
+        ##this was for implementing stationary ppl
+        #xyrv_stationary[c, 0] = x_rnd
+        #xyrv_stationary[c, 1] = y_rnd
     ## To add ellipses : Ellipse( (center_x,center_y), width, height,
     ##                            angle_in_degrees_anti-clockwise )
     for se in jdom["shape_ellipses"]:
@@ -312,6 +367,7 @@ for i,jdom in enumerate(json_domains):
                       fill_color=spo["fill_color"])
     ## To build the domain : background + shapes
     dom.build_domain()
+    
     ## To add all the available destinations
     for j,dd in enumerate(jdom["destinations"]):
         desired_velocity_from_color=[]
@@ -329,7 +385,14 @@ for i,jdom in enumerate(json_domains):
         dom.add_destination(dest)
         #if (with_graphes):
         #    dom.plot_desired_velocity(dd["name"],id=100*i+10+j,step=20)
-
+    
+    ##add destination of stationary people
+    # for ppl in range(10):
+    #     name_stationary = 'stationary '+ str(ppl)
+    #     dest_stationary = Destination(name = name_stationary, colors=[[ppl+100, 0, 0]])
+    #     dom.add_destination(dest_stationary)
+    #     dest_list.append(dest_stationary)
+    #     print("===> Destination : ",dest_stationary)
     print("===> Domain : ",dom)
     #if (with_graphes):
     #    dom.plot(id=100*i)
@@ -340,7 +403,7 @@ for i,jdom in enumerate(json_domains):
 print("===> All domains = ",domains)
 
 ## Awareness stuff ##
-# The awareness values should be between 0 and 1
+#The awareness values should be between 0 and 1
 mean_awr = 0.5 # mean of awareness
 stdev_awr = 0.2 # stdev of awareness
 awr = np.random.normal(mean_awr, stdev_awr, nn) # awareness[i] is the awareness value of person i
@@ -349,7 +412,7 @@ for i in range(awr.shape[0]): #Just in case you get unlucky
         awr[i] = 0
     elif awr[i] > 1:
         awr[i] = 1
-
+#awr = np.ones(nn) #for testing
 """
     To create the sensors to measure the pedestrian flows
 """
@@ -375,9 +438,24 @@ counter = 0
 
 ## Initialize people
 all_people = {}
+## RETIRED (until it's fixed or forever unless we need stationary people to be ppl) ##
+## initialize stationary people 
+#stationary_ppl = []
+# for ppl in range(N_stationary):
+#     group_stationary = [{"nb":1, "radius_distribution": ["uniform",0.4,0.6], "velocity_distribution": ["normal",1.2,0.1], \
+#     "box": [15,15,20,40], "destination": 'stationary '+str(ppl)}]
+#     print(group_stationary)
+#     stationary_person = people_initialization(dom, group_stationary, dt, dmin_people=dmin_people, dmin_walls=dmin_walls, seed=seed,\
+#         itermax=10, projection_method=projection_method, verbose=True)
+#  #change the x and y to dest x and y 
+#     stationary_person["xyrv"][0] = xyrv_stationary[ppl, 0]
+#     stationary_person["xyrv"][1] = xyrv_stationary[ppl, 1]    
+#     stationary_ppl = stationary_ppl.append(stationary_person) 
+
 for i,peopledom in enumerate(json_people_init):
     dom = domains[peopledom["domain"]]
     groups = peopledom["groups"]
+    print(groups)
     print("===> Group number ",i,", domain = ",peopledom["domain"])
     people = people_initialization(dom, groups, dt,
         dmin_people=dmin_people, dmin_walls=dmin_walls, seed=seed,
@@ -388,15 +466,22 @@ for i,peopledom in enumerate(json_people_init):
     for ip,pid in enumerate(people["id"]):
         people["paths"][pid] = people["xyrv"][ip,:2]
     contacts = None
+    people_tot = people
     if (with_graphes):
-        colors = people["xyrv"][:,2]
+        colors = people_tot["xyrv"][:,2]
         plot_people(100*i+20, dom, people, contacts, colors, time=t,
                     plot_people=plot_p, plot_contacts=plot_c,
                     plot_velocities=plot_v, plot_desired_velocities=plot_vd,
                     plot_sensors=plot_s, sensors=all_sensors[dom.name],
                     savefig=False, filename=prefix+dom.name+'_fig_'+ \
                     str(counter).zfill(6)+'.png')
-    all_people[peopledom["domain"]] = people
+        # plot_people(100*i+20, dom, stationary_ppl[i], contacts, colors, time=t,
+        #             plot_people=plot_p, plot_contacts=plot_c,
+        #             plot_velocities=plot_v, plot_desired_velocities=plot_vd,
+        #             plot_sensors=plot_s, sensors=all_sensors[dom.name],
+        #             savefig=False, filename=prefix+dom.name+'_fig_'+ \
+        #             str(counter).zfill(6)+'.png')
+    all_people[peopledom["domain"]] = people_tot
 #print("===> All people = ",all_people)
 
 """
@@ -455,8 +540,13 @@ while (t<Tf):
 
             contacts = compute_contacts(dom, xyrv, dmax)
             print("     Number of contacts: ",contacts.shape[0])
-            Forces = compute_forces_dz( F, Fwall, xyrv, contacts, Uold, Vd,
-                                     lambda_, delta, kappa, eta, Fdz, dzy, awr)
+            Forces = compute_forces_dz(F, Fwall, xyrv, contacts, Uold, Vd,
+                                     lambda_, delta, kappa, eta, Fdz, dzy_down, dzy_up, awr)
+            # Forces = compute_forces(F, Fwall, xyrv, contacts, Uold, Vd,
+            #                          lambda_, delta, kappa, eta)
+            #Forces = compute_forces_dz_2(F, Fwall, xyrv, contacts, Uold, Vd,
+            #                         lambda_, delta, kappa, eta, Fdz, box_dz_down)
+            
             nn = people["xyrv"].shape[0]
             all_people[name]["U"] = dt*(Vd[:nn,:]-Uold[:nn,:])/tau + \
                           Uold[:nn,:] + \
@@ -475,10 +565,10 @@ while (t<Tf):
             ## coloring people according to their radius
             colors =  all_people[name]["xyrv"][:,2]
             ## coloring people according to their destinations
-            # colors = np.zeros(all_people[name]["xyrv"].shape[0])
-            # for i,dest_name in enumerate(all_people[name]["destinations"]):
-            #     ind = np.where(all_people[name]["destinations"]==dest_name)[0]
-            #     colors[ind]=i
+            colors = np.zeros(all_people[name]["xyrv"].shape[0])
+            for i,dest_name in enumerate(all_people[name]["destinations"]):
+                ind = np.where(all_people[name]["destinations"]==dest_name)[0]
+                colors[ind]=i
             plot_people(100*idom+20, dom, all_people[name], contacts,
                         colors, virtual_people=virtual_people[name], time=t,
                         plot_people=plot_p, plot_contacts=plot_c,

@@ -159,7 +159,7 @@ def compute_forces(F, Fwall, xyrv, contacts, U, Vd, lambda_, delta, k, eta):
             Forces[i,1] -= fij*eij_y
     return Forces
 
-def compute_forces_dz(F, Fwall, xyrv, contacts, U, Vd, lambda_, delta, k, eta, Fdz, dzy, awr):
+def compute_forces_dz(F, Fwall, xyrv, contacts, U, Vd, lambda_, delta, k, eta, Fdz, dzy_down, dzy_up, awr):
     """This function computes all the forces (isentropic interaction and
     friction) and sums them. The correcting pre-factor due to the vision
     angle is also used into the social force term.
@@ -190,8 +190,14 @@ def compute_forces_dz(F, Fwall, xyrv, contacts, U, Vd, lambda_, delta, k, eta, F
         individuals seen as deformable bodies
     eta: float
         friction coefficient
-    dzy: float
-        y-coordinate of danger zone
+    Fdz: float
+        danger zone force    
+    dzy_down: float
+        y-coordinate of lower danger zone
+    dzy_up: float
+        y-coordinate of upper danger zone  
+    awr: array
+        awareness value (computed in the code), in [0,1], for each person       
     Returns
     -------
     Forces: numpy array
@@ -240,16 +246,119 @@ def compute_forces_dz(F, Fwall, xyrv, contacts, U, Vd, lambda_, delta, k, eta, F
             fij = -Fwall*np.exp(-dij/delta) + k*dij_moins
             Forces[i,0] -= fij*eij_x
             Forces[i,1] -= fij*eij_y
+        for ppl in range(Np):
+            #If the y coord of a person is 'close' to the dz
+            if (xyrv[ppl][1] - 5.0 > dzy_down) or (xyrv[ppl][1] + 5.0 < dzy_up): 
+                #pass
+                # Danger zone force DOES NOTHING??
+                ## Note: This seems to be too aggressive for now
+                ##If person is not in the dz, the force is 
+                if dzy_up > xyrv[ppl][1]: #We hardcode a maximum force:^), this is the normal case
+                    Forces[ppl,1] -= (Fdz*np.exp(-(dzy_up-xyrv[ppl][1])/delta)*awr[ppl] + k*dij_moins)*eij_y #For upper danger zone, Note: same delta for now
+                    #Forces[i,1] -= Fdz*eij_y #for testing
+                elif dzy_down < xyrv[ppl][1]:
+                    Forces[ppl,1] -= (Fdz*np.exp(-(xyrv[ppl][1]-dzy_down)/delta)*awr[ppl] + k*dij_moins)*eij_y
+                    #Forces[i,1] -= Fdz*eij_y #for testing
+                else:
+                    Forces[ppl,1] -= (Fdz*awr[ppl] + k*dij_moins)*eij_y # Fdz = Fdz*exp(0), the maximum
+                    print(Forces)
+    return Forces
 
-    for i in range(Np):
-        if xyrv[i][1] + 10 > dzy: #If the y coord of a person is 'close' to the dz
-            #pass
-            # Danger zone force
-            ## Note: This seems to be too aggressive for now
-            if dzy > xyrv[i][1]: #We hardcode a maximum force:^), this is the normal case
-                Forces[i,1] -= Fdz*np.exp(-(dzy-xyrv[i][1])/delta)*awr[i] #For upper danger zone ##NOTE: same delta for now
+## NOT NEEDED 
+def compute_forces_dz_2(F, Fwall, xyrv, contacts, U, Vd, lambda_, delta, k, eta, Fdz, box):
+    """This function computes all the forces (isentropic interaction and
+    friction) and sums them. The correcting pre-factor due to the vision
+    angle is also used into the social force term.
+    Parameters
+    ----------
+    F: float
+        social trend of an individual to keep apart from another (homogeneous
+        to a force)
+    Fwall: float
+        social trend of an individual to keep apart from a wall (homogeneous
+        to a force)
+    xyrv: numpy array
+        people coordinates, radius and velocity coefficient: ``x,y,r,v``
+    contacts: numpy array
+        all the contacts: ``i,j,dij,eij_x,eij_y``
+    U: numpy array
+        people velocities
+    Vd: numpy array
+        people desired velocities
+    lambda_: float
+        quantifies the directional dependence when the vision angle is
+        considered (between ``[0,1]``, if equal to 1 the fully isotropic case is
+        recovered)
+    delta: float
+        maintains a certain distance between neighbors
+    k: float
+        used when there is overlapping, k is a stiffness constant of
+        individuals seen as deformable bodies
+    eta: float
+        friction coefficient
+    Fdz: float
+        force in newtons for the danger zone
+    box1,2: double array [[xmin,xmax,ymin,ymax]] 
+        cooridinates for the zones that should apply the special force Fdz 
+    Returns
+    -------
+    Forces: numpy array
+        sum of all forces for each individual
+    """
+    
+    Np = xyrv.shape[0]
+    Nc = contacts.shape[0]
+    Forces = np.zeros((Np,2))
+    ## Social forces, friction,...
+    for ic in np.arange(Nc):
+        i = int(contacts[ic,0])
+        j = int(contacts[ic,1])
+        dij = contacts[ic,2]
+        dij_moins = min(dij,0.0)
+        eij_x = contacts[ic,3]
+        eij_y = contacts[ic,4]
+        if (j>-1): ## contact person/person
+            # Angular dependence
+            norm_Vdi = np.sqrt( Vd[i,0]**2+Vd[i,1]**2 )
+            if (norm_Vdi > 0):
+                theta_ij = np.arccos(  (Vd[i,0]*eij_x+Vd[i,1]*eij_y)/norm_Vdi )
+                omega_ij = lambda_+(1-lambda_)*(1+np.cos(theta_ij))/2
             else:
-                Forces[i,1] -= Fdz*awr[i] # Fdz = Fdz*exp(0), the maximum
+                omega_ij= 1
+            norm_Vdj = np.sqrt( Vd[j,0]**2+Vd[j,1]**2 )
+            if (norm_Vdj > 0):
+                theta_ji = np.arccos( -(Vd[j,0]*eij_x+Vd[j,1]*eij_y)/norm_Vdj )
+                omega_ji = lambda_+(1-lambda_)*(1+np.cos(theta_ji))/2
+            else:
+                omega_ji = 1
+            # Social force + force to handle overlapping
+            fij = -omega_ij*F*np.exp(-dij/delta) + k*dij_moins
+            fji = -omega_ji*F*np.exp(-dij/delta) + k*dij_moins
+            Forces[i,0] += fij*eij_x
+            Forces[i,1] += fij*eij_y
+            Forces[j,0] -= fji*eij_x
+            Forces[j,1] -= fji*eij_y
+            # Friction
+            fij_friction = eta*dij_moins*( -(U[i,0]-U[j,0])*eij_y
+                + (U[i,1]-U[j,1])*eij_x )
+            Forces[i,0] -= fij_friction*eij_y
+            Forces[i,1] += fij_friction*eij_x
+            Forces[j,0] += fij_friction*eij_y
+            Forces[j,1] -= fij_friction*eij_x
+        else: ## contact person/walls
+            ##but dz is not a wall! moreover it does not incorporate awareness at all
+            for i in range(1):
+                xmin = box[i][0]
+                xmax = box[i][1]
+                ymin = box[i][2]
+                ymax = box[i][3]
+                ##this is only if the person is IN the Dz (plus the order was wrong i.e xmin > ...)
+                if (xmin<xyrv[i][1]<xmax and ymin<xyrv[i][2]<ymax):  
+                    fij = -Fdz*np.exp(-dij/delta) + k*dij_moins
+                else:
+                    fij = -Fwall*np.exp(-dij/delta) + k*dij_moins
+                Forces[i,0] -= fij*eij_x
+                Forces[i,1] -= fij*eij_y
     return Forces
 
 
@@ -1304,23 +1413,23 @@ def people_update_destination(all_people, domains, thld, box=None):
                         all_people[next_domain]["Uold"] = np.concatenate(
                                  (all_people[next_domain]["Uold"],
                                   all_people[name]["Uold"][ind[ind2]]))
-                        # remove
-                        try:
-                            id_rm = np.concatenate((id_rm,ind[ind2]))
-                        except:
-                            id_rm = ind[ind2]
+                        ## remove
+                        #try:
+                            #id_rm = np.concatenate((id_rm,ind[ind2]))
+                        #except:
+                           # id_rm = ind[ind2]
                     else:
                         # People do not change domains, they juste change their
                         # destination
                         #print("     => change destination...")
                         all_people[name]["destinations"][ind[ind2]] \
                             = dom.destinations[dest_name].next_destination
-                else: ## in this case, we will only remove these persons...
+                #else: ## in this case, we will only remove these persons...
                     #print("     => remove...")
-                    try:
-                        id_rm = np.concatenate((id_rm,ind[ind2]))
-                    except:
-                        id_rm = ind[ind2]
+                    #try:
+                        #id_rm = np.concatenate((id_rm,ind[ind2]))
+                    #except:
+                        #id_rm = ind[ind2]
 
         if (id_rm is not None):
             for ik,key in enumerate(all_people[name]):
@@ -1672,3 +1781,17 @@ def plot_sensors(ifig, sensors, time, flux_timestep=1, savefig=False,
         fig.canvas.draw()
         if (savefig):
             fig.savefig(filename,dpi=dpi)
+
+#thank god for stackoverflow
+
+def random_from_intervals(intervals): # intervals is a sequence of start,end tuples
+    """
+    Spits out a random value in a union of intervals ( [a,b] U [c,d] U ... )
+    intervals = ((a,b), (c,d), ...) , where start = a,c,... and end = b,d,...
+    """
+    total_size = sum(end-start for start,end in intervals)
+    n = random.uniform(0,total_size)
+    for start, end in intervals:
+        if n < end-start:
+            return start + n
+        n -= end-start
