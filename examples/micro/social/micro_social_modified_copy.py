@@ -257,7 +257,26 @@ print("===> ONLY used during initialization ! Minimal distance between \
        persons, dmin_people = ",dmin_people)
 print("===> ONLY used during initialization ! Minimal distance between a \
        person and a wall, dmin_walls = ",dmin_walls)
-nn=20
+
+nn = 20
+N_stationary = input["N_stationary"] #number of stationary people
+
+#DZ specific inputs
+Fdz = input["Fdz"] 
+dzy_up = input["dzy_up"] 
+dzy_down = input["dzy_down"]
+#box_dz_up = [[1.0,296.0, 51.0, 52.3]]
+box_dz_down = [[1.0,296.0, 1.0, 4.5]]
+
+## ZONES 
+## we can adjust the boxes how we like
+zone_1 = [[1.0, 50.2 , 1.0, 52.3 ]]
+zone_2 = [[50.21, 125.0, 1.0, 52.3]]
+zone_3 = [[125.01, 216.0 , 1.0, 52.3]]
+zone_4 =[[216.01 , 296.0, 1.0, 52.3]]
+
+## Awareness stuff ##
+#The awareness values should be between 0 and 1
 mean_awr = 0.5 # mean of awareness
 stdev_awr = 0.2 # stdev of awareness
 awr = np.random.normal(mean_awr, stdev_awr, nn) # awareness[i] is the awareness value of person i
@@ -266,6 +285,9 @@ for i in range(awr.shape[0]): #Just in case you get unlucky
         awr[i] = 0
     elif awr[i] > 1:
         awr[i] = 1
+#awr = np.ones(nn) #for testing 
+  
+## Safety stuff
 
 """
     Build the Domain objects
@@ -295,6 +317,41 @@ for i,jdom in enumerate(json_domains):
         circle = Circle( (sc["center_x"], sc["center_y"]), sc["radius"] )
         dom.add_shape(circle,outline_color=sc["outline_color"],
                       fill_color=sc["fill_color"])
+
+##To add the circles for the stationary people 
+    ##stationary people = obstacles; hence the color black 
+    ##(which is the wall color)
+    for c in range(N_stationary):
+        ## boundaries of kiosk: [124,215, 17.3,38.3]
+        ## boundaries of some other thingy at the end of the platform: [286,297, 16.5,38.1]  
+        ## y's of waiting places in zone_1: [(1,9),(46.5,54)]
+        dummy = random.choices([1,2,3,4], [1,5,20,10])
+        if dummy[0] == 1:
+            x_rnd = random.uniform(zone_1[0][0],zone_1[0][1]) 
+            y_rnd = random_from_intervals(((1,9), (46.5,54)))
+        elif dummy[0] == 2:
+            x_rnd = random.uniform(zone_2[0][0],zone_2[0][1]) 
+            y_rnd = random.uniform(zone_2[0][2],zone_2[0][3])
+        elif dummy[0] == 3:
+            x_rnd = random.uniform(zone_3[0][0],zone_3[0][1]) 
+            y_rnd = random_from_intervals(((1,17.3),(38.3,54)))
+            #move ppl closer to walls depending on the mean awareness
+            if y_rnd < 7:
+                chance = random.uniform(0,1)
+                if chance > mean_awr:
+                    y_rnd = y_rnd + 10 
+            elif y_rnd > 48.3:
+                chance = random.uniform(0,1)
+                if chance > mean_awr:
+                    y_rnd = y_rnd - 10      
+        else:    
+            x_rnd = random.uniform(zone_4[0][0],zone_4[0][1])
+            if (x_rnd>286.0 and x_rnd<297):
+                y_rnd = random_from_intervals(((1,17.3),(38.3,54)))
+            else:
+                y_rnd = random.uniform(1,54)           
+        circles = Circle((x_rnd, y_rnd), 0.35) #random location of dots
+        dom.add_shape(circles, outline_color=[0,0,0],fill_color=[0,0,0])                      
     ## To add ellipses : Ellipse( (center_x,center_y), width, height,
     ##                            angle_in_degrees_anti-clockwise )
     for se in jdom["shape_ellipses"]:
@@ -450,8 +507,8 @@ while (t<Tf):
 
             contacts = compute_contacts(dom, xyrv, dmax)
             print("     Number of contacts: ",contacts.shape[0])
-            Forces = compute_forces_dz( F, Fwall, xyrv, contacts, Uold, Vd,
-                                     lambda_, delta, kappa, eta,600,51.0,5.6,awr)
+            Forces = compute_forces_dz(F, Fwall, xyrv, contacts, Uold, Vd,
+                            lambda_, delta, kappa, eta, Fdz, dzy_down, dzy_up, awr)
             nn = people["xyrv"].shape[0]
             all_people[name]["U"] = dt*(Vd[:nn,:]-Uold[:nn,:])/tau + \
                           Uold[:nn,:] + \
@@ -508,7 +565,7 @@ while (t<Tf):
 
 for idom,domain_name in enumerate(all_sensors):
     print("===> Plot sensors of domain ",domain_name)
-    plot_sensors(100*idom+40, all_sensors[domain_name], t, savefig=True,
+    plot_sensors(100*idom+40, all_sensors[domain_name], t, savefig=False,
                 filename=prefix+'sensor_'+str(i)+'_'+str(counter)+'.png')
     plt.pause(0.01)
 

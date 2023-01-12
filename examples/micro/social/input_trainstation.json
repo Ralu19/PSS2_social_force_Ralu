@@ -137,7 +137,15 @@
           "velocity_distribution": ["normal",1.2,0.1],
           "box": [10,15,5,8],
           "destination": "dest5" 
+        },
+        {
+        "nb": 5,
+        "radius_distribution": ["uniform",0.45,0.5],
+        "velocity_distribution": ["normal",1.2,0.1],
+        "box": [100,150,5,8],
+        "destination": "dest5" 
         }
+
       ]
     }
   ],
