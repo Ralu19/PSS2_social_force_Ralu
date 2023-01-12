@@ -253,17 +253,17 @@ def compute_forces_dz(F, Fwall, xyrv, contacts, U, Vd, lambda_, delta, k, eta, F
             ## Note: This seems to be too aggressive for now
             ##If person is not in the dz, the force is 
             if dzy_up > xyrv[ppl][1]: #We hardcode a maximum force:^), this is the normal case
-                Forces[ppl,1] -= Fdz*np.exp(-(dzy_up-xyrv[ppl][1])/delta)*(awr[ppl])**2 #For upper danger zone, Note: same delta for now
+                Forces[ppl,1] -= Fdz*np.exp(-(dzy_up-xyrv[ppl][1])/delta)*(awr[ppl]) #For upper danger zone, Note: same delta for now
                 #Forces[i,1] -= Fdz*eij_y #for testing
                 #Forces[i,1] -= Fdz*eij_y #for testing
             else:
-                Forces[ppl,1] -= Fdz*awr[ppl]**2 # Fdz = Fdz*exp(0), the maximum
+                Forces[ppl,1] -= Fdz*awr[ppl] # Fdz = Fdz*exp(0), the maximum
                 #print(Forces)
         if xyrv[ppl][1] - 10.0 < dzy_down:
             if dzy_down < xyrv[ppl][1]:
-                Forces[ppl,1] += Fdz*np.exp(-(xyrv[ppl][1]-dzy_down)/delta)*(awr[ppl])**2
+                Forces[ppl,1] += Fdz*np.exp(-(xyrv[ppl][1]-dzy_down)/delta)*(awr[ppl])
             else:
-                Forces[ppl,1] += Fdz*awr[ppl]**2 # Fdz = Fdz*exp(0), the maximum
+                Forces[ppl,1] += Fdz*awr[ppl] # Fdz = Fdz*exp(0), the maximum
 
     # for i in range(Np):
     #     if xyrv[i][1] + 10 > dzy_up: #If the y coord of a person is 'close' to the dz

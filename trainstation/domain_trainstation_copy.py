@@ -13,12 +13,13 @@ dmax = 0.1 # max distance to take ,vin account for contacts
 drawper = 1000 # generate plot for 1 per 1000 iterations of dt
 
 nn = 10 # number of people
+N_stationary = 10
 box = [120,130,10,20] # coordinates of the box that will be populated [xmin, xmax, ymin, ymax]
 dest_name = "door" # name given to by domain.add_destination function
 radius_distribution = ["uniform",0.4,0.6] # distribution variable 
 velocity_distribution = ["normal",1.2,0.1] # distribution varible
 rng = 0 # some seed value for the distribution, if =0 then random value will be chosen on run
-dt = 0.0005 # timestep
+dt = 0.001 # timestep
 dmin_people=0.01 # minimal disired distance to other people
 dmin_walls=0.01 # minimal disired distance to walls
 
@@ -66,7 +67,7 @@ plt.ion()
 #The awareness values should be between 0 and 1
 mean_awr = 0.5 # mean of awareness
 stdev_awr = 0.2 # stdev of awareness
-awr = np.random.normal(mean_awr, stdev_awr, nn) # awareness[i] is the awareness value of person i
+awr = np.random.normal(mean_awr, stdev_awr, nn+N_stationary) # awareness[i] is the awareness value of person i
 for i in range(awr.shape[0]): #Just in case you get unlucky
     if awr[i] < 0:
         awr[i] = 0
@@ -75,7 +76,7 @@ for i in range(awr.shape[0]): #Just in case you get unlucky
 #awr = np.ones(nn) #for testing 
 
 #create a domain object from picture walls_trainstation
-dom = Domain(name = 'trainstation', background = 'trainstation2.png', pixel_size = 0.2)
+dom = Domain(name = 'trainstation', background = 'trainstation/trainstation2.png', pixel_size = 0.2)
 ## To define the color for the walls
 wall_color = [0,0,0]
 
@@ -85,28 +86,27 @@ door_color = [255,0,0]
 ## To add an obstacle using a matplotlib shape colored with wall_color :
 ##     Circle( (center_x,center_y), radius )
 
-circle = Circle((20.0,7.0), 1.0)
+circle = Circle((40,7.0), 1.0)
 dom.add_shape(circle, outline_color=door_color, fill_color=door_color)
 
 
 
 
 dom.build_domain()
-dom.plot(id=3, title="Domain", savefig=False)
+#dom.plot(id=3, title="Domain", savefig=False)
 ## To create a Destination object towards the door
 dest = Destination(name='door', colors=[door_color],
                    excluded_colors=[wall_color])
 dom.add_destination(dest)
+#dom.plot_wall_dist(id=1, step=20,title="Distance to walls and its gradient",savefig=False, filename="room_wall_distance.png")
 
-dom.plot_wall_dist(id=1, step=20,title="Distance to walls and its gradient",savefig=False, filename="room_wall_distance.png")
-
-dom.plot_desired_velocity('door',id=2, step=20,title="Distance to the destination and desired velocity",savefig=False, filename="room_desired_velocity.png")
+#dom.plot_desired_velocity('door',id=2, step=20,title="Distance to the destination and desired velocity",savefig=False, filename="room_desired_velocity.png")
 
 
 
 # create dict for sensors
-sensors = [{'name':'sensor1', 'domain':'dom','line':[116.0,27.0,116.0,4.0],'id':[],'xy':[],'dir':[],'times':[]}]
-
+sensors = [{'name':'dzdown', 'domain':'dom','line':[1.0, 4.5, 296.0, 4.5],'id':[],'xy':[],'dir':[],'times':[]}]
+sensors.append({'name':'dzup', 'domain':'dom','line':[1.0, 51.0, 296.0, 51.0],'id':[],'xy':[],'dir':[],'times':[]})
 
 #intialize people
 
@@ -118,11 +118,11 @@ contacts = None
 colors = people["xyrv"][:,2]
 
 plt.show()
-group2 = [{"nb":5, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":[30,40,9,15], "destination":dest_name}]
+group2 = [{"nb":N_stationary, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":[40,70,10,15], "destination":dest_name}]
 people2 = people_initialization(dom, group2,dt,dmin_people,dmin_walls,rng,itermax,projection_method='cvxopt')
 
 #makes a new destination in the domain and changes the destination to the new one in the dict
-for i in range(5):
+for i in range(N_stationary):
         position = people2["xyrv"][i][0:2]
         circle = Circle(position, radius=1)
         dom.add_shape(circle,outline_color=[0,0,i+100],fill_color=[0,0,i+100])
@@ -139,8 +139,10 @@ for k,v in people.items():
         all_people[k] = people[k]
 people = all_people
 
+safety = np.zeros((nn+N_stationary,Tf))
+
 # main calculating loop
-plot_people(0,dom,people,contacts,colors,sensors)
+#plot_people(0,dom,people,contacts,colors)
 while(t<Tf):
     print("\n===> Time = "+str(t))
     print("===> Compute desired velocity for domain ",name)
@@ -149,10 +151,21 @@ while(t<Tf):
     people["I"] = I
     people["J"] = J
 
+    ## Safety stuff'
+    t_int = int(t)
+    for i in range(nn):
+        if people["xyrv"][i,1] >= dzy_up:
+            safety[i,t_int] = ((people["xyrv"][i,1]-dzy_up)/(53.9-dzy_up))**2
+        elif people["xyrv"][i,1] <= dzy_down:
+            safety[i,t_int] = ((-people["xyrv"][i,1]+dzy_down)/(dzy_down))**2
+        else:
+            safety[i,t_int] = 0
+
+
     print("===> Compute social forces for domain ",name)  
     contacts = compute_contacts(dom, people["xyrv"], dmax)
     print("     Number of contacts: ",contacts.shape[0])
-    Forces = compute_forces(F, Fwall, people["xyrv"], contacts, people["Uold"], Vd, lambda_, delta, kappa, eta)            
+    Forces = compute_forces_dz(F, Fwall, people["xyrv"], contacts, people["Uold"], Vd, lambda_, delta, kappa, eta,Fdz,dzy_down,dzy_up,awr)            
     nn = people["xyrv"].shape[0]
     people["U"] = dt*(Vd[:nn,:]-people["Uold"][:nn,:])/tau + people["Uold"][:nn,:] + dt*Forces[:nn,:]/mass
 
