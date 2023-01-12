@@ -1,5 +1,5 @@
 t = 0 # start time
-Tf = 200 # end time
+Tf = 15 # end time
 # variables for modeling
 tau = 0.5 
 mass = 80
@@ -19,8 +19,27 @@ radius_distribution = ["uniform",0.4,0.6] # distribution variable
 velocity_distribution = ["normal",1.2,0.1] # distribution varible
 rng = 0 # some seed value for the distribution, if =0 then random value will be chosen on run
 dt = 0.0005 # timestep
-dmin_people=0 # minimal disired distance to other people
-dmin_walls=0 # minimal disired distance to walls
+dmin_people=0.01 # minimal disired distance to other people
+dmin_walls=0.01 # minimal disired distance to walls
+
+## DZ stuff
+Fdz = 575.0,
+dzy_up = 51.0,
+dzy_down = 5.6,
+
+## ZONES 
+## we can adjust the boxes how we like
+zone_1 = [[1.0, 50.2 , 1.0, 52.3 ]]
+zone_2 = [[50.21, 125.0, 1.0, 52.3]]
+zone_3 = [[125.01, 216.0 , 1.0, 52.3]]
+zone_4 =[[216.01 , 296.0, 1.0, 52.3]]
+
+## Spawning zones
+
+escalators_down = [11,33,14.1,17.9]
+escalators_up = [5.5,33,38.7,41.7]
+stairs = [6,33,20,36.7]
+
 
 #need to be intitailized to play nice
 draw = False
@@ -43,13 +62,33 @@ from matplotlib.lines import Line2D
 plt.ion()
 
 
+## Awareness stuff ##
+#The awareness values should be between 0 and 1
+mean_awr = 0.5 # mean of awareness
+stdev_awr = 0.2 # stdev of awareness
+awr = np.random.normal(mean_awr, stdev_awr, nn) # awareness[i] is the awareness value of person i
+for i in range(awr.shape[0]): #Just in case you get unlucky
+    if awr[i] < 0:
+        awr[i] = 0
+    elif awr[i] > 1:
+        awr[i] = 1
+#awr = np.ones(nn) #for testing 
+
 #create a domain object from picture walls_trainstation
-dom = Domain(name = 'trainstation', background = 'walls_trainstation.png', pixel_size = 0.1)
+dom = Domain(name = 'trainstation', background = 'trainstation2.png', pixel_size = 0.2)
 ## To define the color for the walls
 wall_color = [0,0,0]
 
 ## To define the color for the issue of the room
 door_color = [255,0,0]
+
+## To add an obstacle using a matplotlib shape colored with wall_color :
+##     Circle( (center_x,center_y), radius )
+
+circle = Circle((20.0,7.0), 1.0)
+dom.add_shape(circle, outline_color=door_color, fill_color=door_color)
+
+
 
 
 dom.build_domain()
@@ -59,32 +98,37 @@ dest = Destination(name='door', colors=[door_color],
                    excluded_colors=[wall_color])
 dom.add_destination(dest)
 
-
-
 dom.plot_wall_dist(id=1, step=20,title="Distance to walls and its gradient",savefig=False, filename="room_wall_distance.png")
 
 dom.plot_desired_velocity('door',id=2, step=20,title="Distance to the destination and desired velocity",savefig=False, filename="room_desired_velocity.png")
 
+
+
+# create dict for sensors
+sensors = [{'name':'sensor1', 'domain':'dom','line':[116.0,27.0,116.0,4.0],'id':[],'xy':[],'dir':[],'times':[]}]
+
+
 #intialize people
 
-groups = [{"nb":nn, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":box, "destination":dest_name}] #create dict bundeling above values
+groups = [{"nb":nn, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":stairs, "destination":dest_name}] #create dict bundeling above values
 # has to be a list of a dict for some reason
 #curseddatatype
 people = people_initialization(dom, groups, dt, dmin_people, dmin_walls, rng, itermax, projection_method='cvxopt')
 contacts = None
 colors = people["xyrv"][:,2]
 
-group2 = [{"nb":5, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":[100,120,5,10], "destination":dest_name}]
+plt.show()
+group2 = [{"nb":5, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":[30,40,9,15], "destination":dest_name}]
 people2 = people_initialization(dom, group2,dt,dmin_people,dmin_walls,rng,itermax,projection_method='cvxopt')
 
 #makes a new destination in the domain and changes the destination to the new one in the dict
-#for i in range(5):
-#        position = people2["xyrv"][i][0:2]
-#        circle = Circle(position, radius=1)
-#        dom.add_shape(circle,outline_color=[0,0,i+100],fill_color=[0,0,i+100])
-#        dest = Destination(name='stationary '+str(i), colors=[[0,0,i+100]])
-#        dom.add_destination(dest)
-#        people2["destinations"][i] = "stationary "+str(i)
+for i in range(5):
+        position = people2["xyrv"][i][0:2]
+        circle = Circle(position, radius=1)
+        dom.add_shape(circle,outline_color=[0,0,i+100],fill_color=[0,0,i+100])
+        dest = Destination(name='stationary '+str(i), colors=[[0,0,i+100]])
+        dom.add_destination(dest)
+        people2["destinations"][i] = "stationary "+str(i)
 
 #merge multiple dicts with same key values
 all_people = {}
@@ -96,9 +140,7 @@ for k,v in people.items():
 people = all_people
 
 # main calculating loop
-plot_people(0,dom,people,contacts,colors)
-plt.show()
-
+plot_people(0,dom,people,contacts,colors,sensors)
 while(t<Tf):
     print("\n===> Time = "+str(t))
     print("===> Compute desired velocity for domain ",name)
@@ -114,7 +156,7 @@ while(t<Tf):
     nn = people["xyrv"].shape[0]
     people["U"] = dt*(Vd[:nn,:]-people["Uold"][:nn,:])/tau + people["Uold"][:nn,:] + dt*Forces[:nn,:]/mass
 
-    people, sensors = move_people(t, dt,people,sensors = {})
+    people, sensors = move_people(t, dt,people,sensors)
     #people = people_update_destination(people["xyrv"],domains = {"dom"},dom.pixel_size)
 
     people["Uold"] = people["U"]
@@ -130,7 +172,7 @@ while(t<Tf):
                             colors, time=t,
                             plot_people=True, plot_contacts=False,
                             plot_paths=True, plot_velocities=False,
-                            plot_desired_velocities=False, plot_sensors=False, savefig=True,
+                            plot_desired_velocities=False, plot_sensors=True, sensors= sensors,savefig=False,
                             filename = "results/"+"domain_trainstation" +str(counter).zfill(6)+".png")
         plt.pause(0.01)
     t += dt
@@ -142,6 +184,9 @@ while(t<Tf):
         
     else:
         draw = False
+
+plot_sensors(100, sensors, t, savefig=False)
+plt.pause(0.01)
 
 plt.ioff()
 plt.show()
