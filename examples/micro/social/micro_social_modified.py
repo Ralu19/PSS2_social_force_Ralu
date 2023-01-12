@@ -572,7 +572,8 @@ while (t<Tf):
                         + str(counter).zfill(6)+'.png')
             plt.pause(0.01)
 
-    ## Safety stuff
+    ## Safety stuff'
+    t_int = int(t)
     for i in range(nn):
         if people["xyrv"][i,1] >= dzy_up:
             safety[i,t_int] = ((people["xyrv"][i,1]-dzy_up)/(53.9-dzy_up))**2
