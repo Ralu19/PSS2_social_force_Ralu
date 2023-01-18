@@ -1,5 +1,5 @@
 t = 0 # start time
-Tf = 30 # end time
+Tf = 80 # end time
 # variables for modeling
 tau = 0.5 
 mass = 80
@@ -12,17 +12,18 @@ eta = 240000
 dmax = 0.1 # max distance to take ,vin account for contacts
 drawper = 1000 # generate plot for 1 per 1000 iterations of dt
 
-nn = 5 # number of people
+nn = 2 # number of people
 N_1 = 10 # stationary group in zone 1 
 N_2 = 40 # stationary group in zone 2
-N_3 = 60 # stationary group in zone 3
-N_4 = 50 # stationary group in zone 4
-N_stationary = N_1 + N_2 + N_3 + N_4 
+N_3 = 220 # stationary group in zone 3
+N_4 = 60 # stationary group in zone 4
+#N_stationary = N_1 + N_2 + N_3 + N_4 
+N_stationary = N_3
 #N_stationary = 10 
 ntot = nn + N_stationary
 box = [120,130,10,20] # coordinates of the box that will be populated [xmin, xmax, ymin, ymax]
 dest_name = "door" # name given to by domain.add_destination function
-radius_distribution = ["uniform",0.4,0.6] # distribution variable 
+radius_distribution = ["uniform",0.7,0.8] # distribution variable 
 velocity_distribution = ["normal",1.2,0.1] # distribution varible
 rng = 0 # some seed value for the distribution, if =0 then random value will be chosen on run
 dt = 0.001 # timestep
@@ -30,23 +31,24 @@ dmin_people=0.01 # minimal disired distance to other people
 dmin_walls=0.01 # minimal disired distance to walls
 
 ## DZ stuff
-Fdz = 575
+Fdz = 400
 dzy_up = 51.0
 dzy_down = 5.6
 
 ## ZONES 
 ## we can adjust the boxes how we like
-zone_1 = [1.0, 50.2 , 1.0, 52.3 ]
-zone_2 = [50.21, 125.0, 1.0, 52.3]
-zone_3 = [125.01, 216.0 , 1.0, 52.3]
-zone_4 =[216.01 , 296.0, 1.0, 52.3]
+zone_1 = [1.0, 50.2 , 5.5, 51 ]
+zone_2 = [50.21, 125.0, 5.5, 51]
+zone_3 = [125.01, 216.0 , 5.5, 51]
+zone_4 =[216.01 , 296.0, 5.5, 51]
 
 ## Spawning zones
 
 escalators_down = [11,33,14.1,17.9]
 escalators_up = [5.5,33,38.7,41.7]
 stairs = [6,33,20,36.7]
-
+box_down = [120, 125, 5, 7]
+box_up = [120, 125, 49, 51.7]
 
 #need to be intitailized to play nice
 draw = False
@@ -71,15 +73,17 @@ plt.ion()
 
 ## Awareness stuff ##
 #The awareness values should be between 0 and 1
-mean_awr = 0.5 # mean of awareness
-stdev_awr = 0.2 # stdev of awareness
-awr = np.random.normal(mean_awr, stdev_awr, nn+N_stationary) # awareness[i] is the awareness value of person i
-for i in range(awr.shape[0]): #Just in case you get unlucky
-    if awr[i] < 0:
-        awr[i] = 0
-    elif awr[i] > 1:
-        awr[i] = 1
-#awr = np.ones(nn) #for testing 
+# mean_awr = 0.5 # mean of awareness
+# stdev_awr = 0.2 # stdev of awareness
+# awr = np.random.normal(mean_awr, stdev_awr, ntot) # awareness[i] is the awareness value of person i
+# awr[0] = 0.2
+# awr[1]= 0.2
+# for i in range(awr.shape[0]): #Just in case you get unlucky
+#     if awr[i] < 0:
+#         awr[i] = 0
+#     elif awr[i] > 1:
+#         awr[i] = 1
+awr = np.zeros(ntot) #for testing 
 
 #create a domain object from picture walls_trainstation
 dom = Domain(name = 'trainstation', background = 'trainstation/trainstation2.png', pixel_size = 0.2)
@@ -92,20 +96,20 @@ door_color = [255,0,0]
 ## To add an obstacle using a matplotlib shape colored with wall_color :
 ##     Circle( (center_x,center_y), radius )
 
-circle = Circle((40,2.0), 1.0)
-dom.add_shape(circle, outline_color=door_color, fill_color=door_color)
+circle1 = Circle((54,42), 0.5)
+dom.add_shape(circle1, outline_color=door_color, fill_color=door_color)
 
-circle = Circle((80,2.0), 1.0)
-dom.add_shape(circle, outline_color=door_color, fill_color=[0,255,0])
+circle2 = Circle((220,49), 1.0)
+dom.add_shape(circle2, outline_color=[0,255,0], fill_color=[0,255,0])
 
-circle = Circle((70,2.0), 1.0)
-dom.add_shape(circle, outline_color=door_color, fill_color=[0,0,255])
+circle3 = Circle((220,6), 1.0)
+dom.add_shape(circle3, outline_color=[0,0,255], fill_color=[0,0,255])
 
-circle = Circle((60,2.0), 1.0)
-dom.add_shape(circle, outline_color=door_color, fill_color=[0,255,255])
+#circle4 = Circle((95.6,7.7), 0.5)
+#dom.add_shape(circle4, outline_color=door_color, fill_color=[0,255,255])
 
-circle = Circle((50,2.0), 1.0)
-dom.add_shape(circle, outline_color=door_color, fill_color=[255,0,255])
+#circle5 = Circle((50,2.0), 0.5)
+#dom.add_shape(circle5, outline_color=door_color, fill_color=[255,0,255])
 
 dom.build_domain()
 #dom.plot(id=3, title="Domain", savefig=False)
@@ -123,11 +127,11 @@ dest2 = Destination(name='dest2', colors=[[0,0,255]],
                    excluded_colors=[wall_color])
 dom.add_destination(dest2)
 
-dest3 = Destination(name='dest1', colors=[[255,0,255]],
+dest3 = Destination(name='dest3', colors=[[255,0,255]],
                    excluded_colors=[wall_color])
 dom.add_destination(dest3)
 
-dest4 = Destination(name='dest1', colors=[[0,255,255]],
+dest4 = Destination(name='dest4', colors=[[0,255,255]],
                    excluded_colors=[wall_color])
 dom.add_destination(dest4)
 
@@ -143,58 +147,61 @@ sensors.append({'name':'dzup', 'domain':'dom','line':[1.0, 51.0, 296.0, 51.0],'i
 
 #intialize people
 
-groups = [{"nb":nn, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":stairs, "destination":dest_name}] #create dict bundeling above values
+groups = [{"nb":nn-1, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":box_down, "destination":"dest2"}] #create dict bundeling above values
 # has to be a list of a dict for some reason
 #curseddatatype
 people = people_initialization(dom, groups, dt, dmin_people, dmin_walls, rng, itermax, projection_method='cvxopt')
 contacts = None
 colors = people["xyrv"][:,2]
 
-plt.show()
-group1 = [{"nb":N_1, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":zone_1, "destination":dest_name}]
-people1 = people_initialization(dom, group1,dt,dmin_people,dmin_walls,rng,itermax,projection_method='cvxopt')
+group_w1 = [{"nb":1, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":box_up, "destination":"dest1"}]
+people_w1 = people_initialization(dom, group_w1, dt, dmin_people, dmin_walls, rng, itermax, projection_method='cvxopt')
 
-group2 = [{"nb":N_2, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":zone_2, "destination":dest_name}]
-people2 = people_initialization(dom, group2,dt,dmin_people,dmin_walls,rng,itermax,projection_method='cvxopt')
+plt.show()
+# group1 = [{"nb":N_1, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":zone_1, "destination":dest_name}]
+# people1 = people_initialization(dom, group1,dt,dmin_people,dmin_walls,rng,itermax,projection_method='cvxopt')
+
+# group2 = [{"nb":N_2, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":zone_2, "destination":dest_name}]
+# people2 = people_initialization(dom, group2,dt,dmin_people,dmin_walls,rng,itermax,projection_method='cvxopt')
 
 group3 = [{"nb":N_3, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":zone_3, "destination":dest_name}]
 people3 = people_initialization(dom, group3,dt,dmin_people,dmin_walls,rng,itermax,projection_method='cvxopt')
 
-group4 = [{"nb":N_4, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":zone_4, "destination":dest_name}]
-people4 = people_initialization(dom, group4,dt,dmin_people,dmin_walls,rng,itermax,projection_method='cvxopt')
+# group4 = [{"nb":N_4, "radius_distribution":radius_distribution, "velocity_distribution":velocity_distribution, "box":zone_4, "destination":dest_name}]
+# people4 = people_initialization(dom, group4,dt,dmin_people,dmin_walls,rng,itermax,projection_method='cvxopt')
 
 ##makes a new destination in the domain and changes the destination to the new one in the dict
-for i in range(N_1):
-        position = people1["xyrv"][i][0:2]
-        circle = Circle(position, radius=1)
-        dom.add_shape(circle,outline_color=[0,0,i+100],fill_color=[0,0,i+100])
-        dest = Destination(name='stationary '+str(i), colors=[[0,0,i+100]])
-        dom.add_destination(dest)
-        people1["destinations"][i] = "stationary "+str(i)
+# for i in range(N_1):
+#         position = people1["xyrv"][i][0:2]
+#         circle = Circle(position, radius=1)
+#         dom.add_shape(circle,outline_color=[0,0,i+100],fill_color=[0,0,i+100])
+#         dest = Destination(name='stationary '+str(i), colors=[[0,0,i+100]])
+#         dom.add_destination(dest)
+#         people1["destinations"][i] = "stationary "+str(i)
 
-for i in range(N_2):
-        position = people2["xyrv"][i][0:2]
-        circle = Circle(position, radius=1)
-        dom.add_shape(circle,outline_color=[1,0,i+100],fill_color=[0,0,i+100])
-        dest = Destination(name='stationary '+str(i), colors=[[0,0,i+100]])
-        dom.add_destination(dest)
-        people2["destinations"][i] = "stationary "+str(i)
+# for i in range(N_2):
+#         position = people2["xyrv"][i][0:2]
+#         circle = Circle(position, radius=1)
+#         dom.add_shape(circle,outline_color=[1,0,i+100],fill_color=[0,0,i+100])
+#         dest = Destination(name='stationary '+str(i), colors=[[0,0,i+100]])
+#         dom.add_destination(dest)
+#         people2["destinations"][i] = "stationary "+str(i)
 
 for i in range(N_3):
         position = people3["xyrv"][i][0:2]
         circle = Circle(position, radius=1)
-        dom.add_shape(circle,outline_color=[2,0,i+100],fill_color=[0,0,i+100])
+        dom.add_shape(circle,outline_color=[0,0,i+100],fill_color=[0,0,i+100])
         dest = Destination(name='stationary '+str(i), colors=[[0,0,i+100]])
         dom.add_destination(dest)
         people3["destinations"][i] = "stationary "+str(i)
 
-for i in range(N_4):
-        position = people4["xyrv"][i][0:2]
-        circle = Circle(position, radius=1)
-        dom.add_shape(circle,outline_color=[3,0,i+100],fill_color=[0,0,i+100])
-        dest = Destination(name='stationary '+str(i), colors=[[0,0,i+100]])
-        dom.add_destination(dest)
-        people4["destinations"][i] = "stationary "+str(i)        
+# for i in range(N_4):
+#         position = people4["xyrv"][i][0:2]
+#         circle = Circle(position, radius=1)
+#         dom.add_shape(circle,outline_color=[3,0,i+100],fill_color=[0,0,i+100])
+#         dest = Destination(name='stationary '+str(i), colors=[[0,0,i+100]])
+#         dom.add_destination(dest)
+#         people4["destinations"][i] = "stationary "+str(i)        
 
 ##OLD
 # #merge multiple dicts with same key values
@@ -209,7 +216,7 @@ for i in range(N_4):
 safety = np.zeros((ntot,Tf))
 
 #merge list of dicts
-list_of_dicts = [people1, people2, people3, people4, people]
+list_of_dicts = [people, people_w1, people3]
 all_people = {}
 for k,v in enumerate(list_of_dicts):
     for dict_k, dict_v in v.items():
@@ -281,7 +288,7 @@ plt.pause(0.01)
 
 
 
-safety_total = np.sum(safety,axis=0) 
+safety_total = np.sum(safety,axis=0)
 
 plt.figure(23489237)
 plt.plot(safety_total)
